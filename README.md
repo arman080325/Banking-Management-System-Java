@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://readme-typing-svg.demolab.com/?font=Space+Mono&size=30&duration=2600&pause=900&color=16B083&center=true&vCenter=true&width=720&lines=Silicon+Bank;Spring+Boot+%2B+Spring+Security+%2B+PostgreSQL;Accounts+%C2%B7+Transfers+%C2%B7+Double-Entry+Ledger;Java+Console+App+%E2%86%92+Cloud+Web+Bank" alt="Silicon Bank" />
+<img src="https://readme-typing-svg.demolab.com/?font=Space+Mono&size=30&duration=2600&pause=900&color=16B083&center=true&vCenter=true&width=720&lines=IndusTrust+Bank;Spring+Boot+%2B+Spring+Security+%2B+PostgreSQL;Accounts+%C2%B7+Transfers+%C2%B7+Double-Entry+Ledger;Java+Console+App+%E2%86%92+Cloud+Web+Bank" alt="IndusTrust Bank" />
 
 ### A session-authenticated banking service — rebuilt from a console/JDBC Java app into a production **Spring Boot** web application with a real double-entry ledger, row-locked transfers, and BigDecimal money.
 
@@ -22,7 +22,7 @@
 
 ## 📌 About
 
-**Silicon Bank** lets a user register, sign in, open accounts, deposit, withdraw, transfer money between accounts, and view a full transaction statement — all behind session authentication, with every account scoped to its owner.
+**IndusTrust Bank** lets a user register, sign in, open accounts, deposit, withdraw, transfer money between accounts, and view a full transaction statement — all behind session authentication, with every account scoped to its owner.
 
 It's a ground-up rebuild of a **console-based JDBC banking app**. The original ran in a `Scanner` loop against MySQL; this version is a real web service that adds the ledger, locking, and auth the original only gestured at:
 
@@ -45,8 +45,13 @@ It's a ground-up rebuild of a **console-based JDBC banking app**. The original r
 - 🏦 **Multiple accounts** per user, each with its own security PIN
 - 💸 **Deposit, withdraw, transfer** — transfers are atomic and row-locked
 - 📜 **Double-entry ledger** — every movement recorded with a running balance and a shared reference linking transfer legs
-- 🧾 **Paginated statement** per account with credit/debit columns
-- 👤 **Ownership isolation** — you can only see and touch your own accounts (enforced server-side)
+- 🧾 **Paginated statement** per account with credit/debit columns, plus a **full CSV export** (not limited to the loaded page)
+- 👥 **Beneficiaries** — save payees to the database for faster future transfers
+- 🧾 **Bill Pay / Recharge** — pays from a real account (debited via the same ledger) and keeps a persisted history
+- 💳 **Cards** — one card issued per account, with freeze/unfreeze, contactless/online toggles, and replacement requests, all persisted server-side
+- 🎫 **Support tickets** — messages sent from the Support page are stored and listed back to the user with a ticket number
+- 🔑 **Change password** from the Profile page, verified against the current BCrypt hash
+- 👤 **Ownership isolation** — you can only see and touch your own accounts, cards, beneficiaries, and bills (enforced server-side)
 - 🌗 **Light / Dark / System** theme, persisted, applied pre-paint
 - 🛡️ Hardened headers (CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy`), HTTP-only SameSite session cookie
 - 📘 Swagger UI · 💓 Actuator health · 🧪 Integration tests · 🔁 GitHub Actions CI
@@ -131,15 +136,27 @@ Production is fully environment-driven — see `.env.example`:
 | `POST` | `/api/auth/login` | Start a session |
 | `POST` | `/api/auth/logout` | End the session |
 | `GET` | `/api/auth/me` | Current user |
+| `POST` | `/api/auth/change-password` | Change the signed-in user's password |
 | `GET` | `/api/accounts` | List **your** accounts |
 | `POST` | `/api/accounts` | Open an account |
 | `GET` | `/api/accounts/{number}` | Account detail (owner only) |
 | `GET` | `/api/accounts/{number}/history` | Paginated statement |
+| `GET` | `/api/accounts/{number}/statement.csv` | Full statement export (CSV) |
 | `POST` | `/api/accounts/credit` | Deposit |
 | `POST` | `/api/accounts/debit` | Withdraw |
 | `POST` | `/api/accounts/transfer` | Transfer between accounts |
+| `GET` | `/api/beneficiaries` | List your saved beneficiaries |
+| `POST` | `/api/beneficiaries` | Save a beneficiary |
+| `DELETE` | `/api/beneficiaries/{id}` | Remove a beneficiary |
+| `GET` | `/api/billpay/history` | Paginated bill payment history |
+| `POST` | `/api/billpay` | Pay a bill/recharge (debits an owned account) |
+| `GET` | `/api/cards` | List your cards (issued lazily, one per account) |
+| `PATCH` | `/api/cards/{accountNumber}` | Update freeze / contactless / online toggles |
+| `POST` | `/api/cards/{accountNumber}/request-replacement` | Request a replacement card |
+| `GET` | `/api/support/tickets` | List your support tickets |
+| `POST` | `/api/support/tickets` | Raise a new support ticket |
 
-All `/api/accounts/**` routes require an authenticated session. Full docs at `/swagger-ui.html`.
+All `/api/**` routes (aside from register/login) require an authenticated session. Full docs at `/swagger-ui.html`.
 
 <br/>
 
