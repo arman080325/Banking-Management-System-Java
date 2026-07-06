@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in — IndusTrust Bank</title>
+  <link rel="icon" href="/assets/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/bank.css" />
+  <script src="/js/theme-init.js"></script>
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-side">
+      <a href="/index.html" class="auth-side__top" aria-label="IndusTrust Bank home">
+        <img src="/assets/logo.svg" alt="IndusTrust Bank" />
+        <div>
+          <div class="auth-side__brand-name">IndusTrust Bank</div>
+          <div class="auth-side__brand-sub">NetBanking</div>
+        </div>
+      </a>
+
+      <div class="auth-side__pitch">
+        <h2>Banking that works as hard as you do.</h2>
+        <p>Accounts, transfers, bill pay, cards, deposits, and loans — all in one secure dashboard.</p>
+        <div class="auth-side__points">
+          <div class="auth-side__point">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>
+            Session-secured sign-in with PIN-protected transactions
+          </div>
+          <div class="auth-side__point">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>
+            Instant transfers with a full double-entry statement
+          </div>
+          <div class="auth-side__point">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>
+            Deposit &amp; loan calculators, bill pay, and more
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-side__foot">© 2026 IndusTrust Bank — demo product, not a real bank.</div>
+    </div>
+
+    <div class="auth-wrap-inner">
+      <div class="auth-card">
+        <div class="auth-hero">
+          <h1 id="authHeading">Welcome back</h1>
+          <p id="authSubtext">Sign in to manage your accounts.</p>
+        </div>
+        <div class="auth-body">
+          <div class="auth-tabs" role="tablist">
+            <button class="auth-tab" data-mode="login" role="tab" aria-selected="true">Sign in</button>
+            <button class="auth-tab" data-mode="register" role="tab" aria-selected="false">Create account</button>
+          </div>
+
+          <form id="authForm" novalidate>
+            <div class="field" id="nameField" hidden>
+              <label>Full name <span class="req">*</span></label>
+              <input name="fullName" placeholder="Your name" autocomplete="name" />
+              <span class="field__error" data-error="fullName"></span>
+            </div>
+            <div class="field">
+              <label>Email <span class="req">*</span></label>
+              <input name="email" type="email" placeholder="you@example.com" autocomplete="email" />
+              <span class="field__error" data-error="email"></span>
+            </div>
+            <div class="field">
+              <label>Password <span class="req">*</span></label>
+              <input name="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+              <span class="field__error" data-error="password"></span>
+            </div>
+            <button type="submit" class="btn btn--primary btn--block" id="authSubmit" style="margin-top:6px">Sign in</button>
+          </form>
+
+          <div class="auth-demo">
+            Demo login — <b>demo@bank.app</b> · password <b>demo12345</b><br/>
+            (a beneficiary, a bill payment, and a support ticket are pre-loaded)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <script src="/js/auth.js"></script>
+</body>
+</html>
