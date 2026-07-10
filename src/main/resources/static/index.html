@@ -63,6 +63,10 @@
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.6-2.2 2-2.5 3.4M12 17h.01"/></svg>
           Support
         </button>
+        <a class="nav__item" id="adminNavLink" href="/admin.html" hidden>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>
+          Admin console
+        </a>
       </nav>
 
       <div class="sidebar__foot">
@@ -457,31 +461,111 @@
             <div class="profile-grid">
               <div class="profile-row"><label>Full name</label><div class="val" id="profName">—</div></div>
               <div class="profile-row"><label>Email</label><div class="val" id="profEmail">—</div></div>
-              <div class="profile-row"><label>Registered mobile</label><div class="val">+91 98••••••10</div></div>
+              <div class="profile-row"><label>Registered mobile</label><div class="val" id="profPhone">—</div></div>
               <div class="profile-row"><label>Customer ID</label><div class="val" id="profCustId">—</div></div>
-              <div class="profile-row"><label>Address on file</label><div class="val">Demo address — not stored</div></div>
+              <div class="profile-row"><label>Date of birth</label><div class="val" id="profDob">—</div></div>
+              <div class="profile-row"><label>PAN</label><div class="val" id="profPan">—</div></div>
+              <div class="profile-row"><label>Address on file</label><div class="val" id="profAddress">—</div></div>
               <div class="profile-row"><label>Communication preference</label><div class="val">Email &amp; SMS</div></div>
             </div>
-            <div class="note-strip">Profile fields here are read-only demo data pulled from your session — no personal data is stored beyond this app's own accounts.</div>
+            <div class="note-strip">Profile fields here reflect what you provided at sign-up — no personal data is shared beyond this app's own accounts.</div>
           </div>
 
           <div class="panel" style="margin-top:20px">
-            <div class="panel__title">Security</div>
+            <div class="panel__title">Two-factor authentication</div>
+            <div class="panel__sub">Add an authenticator-app code on top of your password for sign-in and large transfers.</div>
+
+            <div id="twofaOff">
+              <div class="row-between" style="gap:12px">
+                <span class="status-pill status-pill--frozen" id="twofaOffBadge">Disabled</span>
+                <button class="btn btn--primary btn--sm" id="twofaStartBtn">Enable 2FA</button>
+              </div>
+            </div>
+
+            <div id="twofaSetup" hidden style="max-width:460px;display:flex;flex-direction:column;gap:14px">
+              <div class="note-strip">Add this key to Google Authenticator, Authy, or any TOTP app as a <b>Time-based</b> key, then enter the 6-digit code it shows.</div>
+              <div class="field">
+                <label>Manual entry key</label>
+                <div style="display:flex;gap:8px">
+                  <input class="mono" id="twofaSecret" readonly style="flex:1" />
+                  <button type="button" class="btn btn--ghost btn--sm" id="twofaCopyBtn">Copy</button>
+                </div>
+              </div>
+              <form id="twofaEnableForm" novalidate style="display:flex;flex-direction:column;gap:12px">
+                <div class="field">
+                  <label>6-digit code from your app <span class="req">*</span></label>
+                  <input name="code" class="mono" inputmode="numeric" maxlength="6" placeholder="000000" style="letter-spacing:.25em" />
+                  <span class="field__error" data-error="code"></span>
+                </div>
+                <div style="display:flex;gap:10px">
+                  <button type="submit" class="btn btn--primary" id="twofaEnableSubmit">Confirm &amp; enable</button>
+                  <button type="button" class="btn btn--ghost" id="twofaCancelBtn">Cancel</button>
+                </div>
+              </form>
+            </div>
+
+            <div id="twofaOn" hidden>
+              <div class="row-between" style="gap:12px;margin-bottom:14px">
+                <span class="status-pill status-pill--active">Enabled</span>
+                <span class="section-sub" style="margin:0">Transfers of ₹50,000+ will ask for a code.</span>
+              </div>
+              <form id="twofaDisableForm" novalidate style="display:flex;flex-direction:column;gap:14px;max-width:420px">
+                <div class="field">
+                  <label>Current password <span class="req">*</span></label>
+                  <div class="field--password">
+                    <input name="password" type="password" autocomplete="current-password" placeholder="••••••••" />
+                    <button type="button" class="field__eye" data-toggle-pw aria-label="Show password" aria-pressed="false">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-open"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-closed"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.6 21.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.6 21.6 0 0 1-2.61 3.68M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                    </button>
+                  </div>
+                  <span class="field__error" data-error="password"></span>
+                </div>
+                <div class="field">
+                  <label>6-digit code <span class="req">*</span></label>
+                  <input name="code" class="mono" inputmode="numeric" maxlength="6" placeholder="000000" style="letter-spacing:.25em" />
+                  <span class="field__error" data-error="code"></span>
+                </div>
+                <button type="submit" class="btn btn--danger" id="twofaDisableSubmit" style="align-self:flex-start">Disable 2FA</button>
+              </form>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-top:20px">
+            <div class="panel__title">Password</div>
             <div class="panel__sub">Change the password used to sign in to your account.</div>
             <form id="passwordForm" novalidate style="display:flex;flex-direction:column;gap:14px;max-width:420px">
               <div class="field">
                 <label>Current password <span class="req">*</span></label>
-                <input name="currentPassword" type="password" autocomplete="current-password" placeholder="••••••••" />
+                <div class="field--password">
+                  <input name="currentPassword" type="password" autocomplete="current-password" placeholder="••••••••" />
+                  <button type="button" class="field__eye" data-toggle-pw aria-label="Show password" aria-pressed="false">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-open"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-closed"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.6 21.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.6 21.6 0 0 1-2.61 3.68M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                  </button>
+                </div>
                 <span class="field__error" data-error="currentPassword"></span>
               </div>
               <div class="field">
                 <label>New password <span class="req">*</span></label>
-                <input name="newPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters" />
+                <div class="field--password">
+                  <input name="newPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters" />
+                  <button type="button" class="field__eye" data-toggle-pw aria-label="Show password" aria-pressed="false">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-open"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-closed"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.6 21.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.6 21.6 0 0 1-2.61 3.68M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                  </button>
+                </div>
                 <span class="field__error" data-error="newPassword"></span>
               </div>
               <div class="field">
                 <label>Confirm new password <span class="req">*</span></label>
-                <input name="confirmPassword" type="password" autocomplete="new-password" placeholder="Re-enter new password" />
+                <div class="field--password">
+                  <input name="confirmPassword" type="password" autocomplete="new-password" placeholder="Re-enter new password" />
+                  <button type="button" class="field__eye" data-toggle-pw aria-label="Show password" aria-pressed="false">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-open"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-closed"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.6 21.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.6 21.6 0 0 1-2.61 3.68M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                  </button>
+                </div>
                 <span class="field__error" data-error="confirmPassword"></span>
               </div>
               <button type="submit" class="btn btn--primary" id="passwordSubmit" style="align-self:flex-start">Update password</button>
@@ -577,6 +661,11 @@
           <label>Security PIN <span class="req">*</span></label>
           <input name="pin" class="mono" type="password" inputmode="numeric" placeholder="••••" maxlength="6" />
           <span class="field__error" data-error="pin"></span>
+        </div>
+        <div class="field" id="transferTotpField" hidden>
+          <label>2FA code <span class="req">*</span></label>
+          <input name="totpCode" class="mono" inputmode="numeric" maxlength="6" placeholder="000000" style="letter-spacing:.25em" />
+          <span class="field__error" data-error="totpCode"></span>
         </div>
         <button type="submit" class="btn btn--primary btn--block" id="transferSubmit">Send transfer</button>
       </form>

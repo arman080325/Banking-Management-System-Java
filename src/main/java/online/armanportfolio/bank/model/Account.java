@@ -54,6 +54,10 @@ public class Account {
     @Column(nullable = false)
     private String pinHash;
 
+    /** Set by an admin (fraud hold, dispute, etc). Blocks all debits and credits. */
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean frozen = false;
+
     @Version
     private Long version;
 

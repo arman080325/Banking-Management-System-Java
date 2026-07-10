@@ -1,7 +1,9 @@
 package online.armanportfolio.bank.service;
 
+import online.armanportfolio.bank.dto.AdminTicketResponse;
 import online.armanportfolio.bank.dto.SupportTicketRequest;
 import online.armanportfolio.bank.dto.SupportTicketResponse;
+import online.armanportfolio.bank.exception.ApiException;
 import online.armanportfolio.bank.model.SupportTicket;
 import online.armanportfolio.bank.model.User;
 import online.armanportfolio.bank.repository.SupportTicketRepository;
@@ -32,5 +34,19 @@ public class SupportService {
     public List<SupportTicketResponse> mine(User owner) {
         return tickets.findByOwnerIdOrderByCreatedAtDesc(owner.getId())
                 .stream().map(SupportTicketResponse::from).toList();
+    }
+
+    /* ---------- admin ---------- */
+
+    @Transactional(readOnly = true)
+    public List<AdminTicketResponse> allTickets() {
+        return tickets.findAllByOrderByCreatedAtDesc().stream().map(AdminTicketResponse::from).toList();
+    }
+
+    @Transactional
+    public void close(Long ticketId) {
+        SupportTicket t = tickets.findById(ticketId)
+                .orElseThrow(() -> ApiException.notFound("Ticket #" + ticketId + " not found"));
+        t.setStatus(SupportTicket.Status.CLOSED);
     }
 }

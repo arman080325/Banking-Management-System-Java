@@ -37,7 +37,10 @@ class BankingIntegrationTest {
     /** Registers + logs in a fresh user, returns an authenticated session. */
     private MockHttpSession authSession(String email) throws Exception {
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .content(json(Map.of("fullName", "Test User", "email", email, "password", "password123"))))
+                .content(json(Map.of(
+                        "fullName", "Test User", "email", email, "password", "password123",
+                        "phone", "9876500000", "dateOfBirth", "1997-05-15",
+                        "panNumber", "ABCDE1234F", "address", "1 Test Street, Test City"))))
                 .andExpect(status().isCreated());
         MvcResult res = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                 .content(json(Map.of("email", email, "password", "password123"))))
