@@ -31,7 +31,8 @@ public class DataSeeder {
             if (users.count() > 0) return;
 
             User demo = userService.register(new RegisterRequest(
-                    "Demo User", "demo@bank.app", "demo12345"));
+                    "Demo User", "demo@bank.app", "demo12345",
+                    "9876543210", java.time.LocalDate.of(1996, 4, 12), "ABCDE1234F", "221B Residency Road, Bengaluru"));
 
             AccountResponse primary = accountService.open(demo, new OpenAccountRequest(
                     "Demo User", new BigDecimal("50000.00"), "1234"));
@@ -41,7 +42,8 @@ public class DataSeeder {
             // A second user, so the demo has a real account to save as a beneficiary
             // and transfer to, instead of a self-referential placeholder.
             User other = userService.register(new RegisterRequest(
-                    "Priya Shah", "priya@example.com", "password123"));
+                    "Priya Shah", "priya@example.com", "password123",
+                    "9123456780", java.time.LocalDate.of(1998, 9, 3), "PQRSX5678K", "44 Marine Drive, Mumbai"));
             AccountResponse otherAccount = accountService.open(other, new OpenAccountRequest(
                     "Priya Shah", new BigDecimal("8000.00"), "5678"));
 
@@ -55,6 +57,13 @@ public class DataSeeder {
             supportService.raise(demo, new SupportTicketRequest(
                     "Question about international transfers",
                     "Hi, does IndusTrust support transfers to overseas accounts? Thanks!"));
+
+            // Admin login for the /admin.html console — credentials shown on the login screen.
+            User admin = userService.register(new RegisterRequest(
+                    "Bank Admin", "admin@bank.app", "admin12345",
+                    "9988776655", java.time.LocalDate.of(1990, 1, 20), "ADMIN1234Z", "IndusTrust HQ, Bengaluru"));
+            admin.setRole(User.Role.ADMIN);
+            users.save(admin);
         };
     }
 }

@@ -7,6 +7,7 @@ import online.armanportfolio.bank.model.LedgerEntry;
 import online.armanportfolio.bank.model.User;
 import online.armanportfolio.bank.repository.AccountRepository;
 import online.armanportfolio.bank.repository.LedgerEntryRepository;
+import online.armanportfolio.bank.security.TotpService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,14 +24,20 @@ public class AccountService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    /** Transfers at or above this amount require a valid TOTP code if the sender has 2FA enabled. */
+    private static final BigDecimal HIGH_VALUE_THRESHOLD = new BigDecimal("50000.00");
+
     private final AccountRepository accounts;
     private final LedgerEntryRepository ledger;
     private final PasswordEncoder encoder;
+    private final TotpService totpService;
 
-    public AccountService(AccountRepository accounts, LedgerEntryRepository ledger, PasswordEncoder encoder) {
+    public AccountService(AccountRepository accounts, LedgerEntryRepository ledger,
+                           PasswordEncoder encoder, TotpService totpService) {
         this.accounts = accounts;
         this.ledger = ledger;
         this.encoder = encoder;
+        this.totpService = totpService;
     }
 
     /* ---------- queries ---------- */
@@ -76,6 +83,7 @@ public class AccountService {
     @Transactional
     public AccountResponse credit(User owner, MoneyRequest req) {
         Account a = lockOwned(owner, req.accountNumber());
+        requireNotFrozen(a);
         verifyPin(a, req.pin());
         a.setBalance(a.getBalance().add(req.amount()));
         writeEntry(a, LedgerEntry.Type.CREDIT, req.amount(), a.getBalance(), "Cash deposit", newReference());
@@ -98,6 +106,7 @@ public class AccountService {
     @Transactional
     public DebitResult debitInternal(User owner, Long accountNumber, BigDecimal amount, String pin, String description) {
         Account a = lockOwned(owner, accountNumber);
+        requireNotFrozen(a);
         verifyPin(a, pin);
         if (a.getBalance().compareTo(amount) < 0) {
             throw ApiException.badRequest("Insufficient balance");
@@ -139,10 +148,13 @@ public class AccountService {
         if (!from.getOwner().getId().equals(owner.getId())) {
             throw ApiException.forbidden("You don't own the source account");
         }
+        requireNotFrozen(from);
+        requireNotFrozen(to);
         verifyPin(from, req.pin());
         if (from.getBalance().compareTo(req.amount()) < 0) {
             throw ApiException.badRequest("Insufficient balance");
         }
+        requireTotpForHighValue(from, req.amount(), req.totpCode());
 
         String ref = newReference();
         from.setBalance(from.getBalance().subtract(req.amount()));
@@ -154,7 +166,40 @@ public class AccountService {
         return AccountResponse.from(from);
     }
 
+    /* ---------- admin commands ---------- */
+
+    /** Places or lifts an admin fraud/dispute hold on an account. */
+    @Transactional
+    public void setFrozen(Long accountNumber, boolean frozen) {
+        Account a = accounts.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> ApiException.notFound("Account #" + accountNumber + " not found"));
+        a.setFrozen(frozen);
+    }
+
     /* ---------- helpers ---------- */
+
+    private void requireNotFrozen(Account a) {
+        if (a.isFrozen()) {
+            throw ApiException.forbidden("Account #" + a.getAccountNumber() + " is frozen — contact support");
+        }
+    }
+
+    /**
+     * Transfers at/above HIGH_VALUE_THRESHOLD need a fresh TOTP code if the sender has 2FA
+     * enabled. Accounts without 2FA are unaffected — this only tightens security for people
+     * who've opted in, never blocks someone who hasn't set it up.
+     */
+    private void requireTotpForHighValue(Account from, BigDecimal amount, String totpCode) {
+        if (!from.getOwner().isTotpEnabled()) return;
+        if (amount.compareTo(HIGH_VALUE_THRESHOLD) < 0) return;
+        if (totpCode == null || totpCode.isBlank()) {
+            throw ApiException.totpRequired("This transfer is above ₹" + HIGH_VALUE_THRESHOLD.toPlainString()
+                    + " — enter your 2FA code to confirm");
+        }
+        if (!totpService.verify(from.getOwner().getTotpSecret(), totpCode)) {
+            throw ApiException.totpInvalid("Incorrect 2FA code");
+        }
+    }
 
     private Account requireOwned(User owner, Long number) {
         Account a = accounts.findByAccountNumber(number)

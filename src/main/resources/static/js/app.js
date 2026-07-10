@@ -12,6 +12,7 @@ let accounts = [];
 let activeNumber = null;
 let ledgerPage = 0;
 const PAGE_SIZE = 8;
+const HIGH_VALUE_THRESHOLD = 50000;
 let ledgerMeta = { totalPages: 1, totalElements: 0, first: true, last: true };
 let currentUser = null;
 
@@ -94,7 +95,7 @@ function accountCardHtml(a) {
     <div class="bank-card ${a.accountNumber === activeNumber ? "is-active" : ""}" data-acct="${a.accountNumber}" role="button" tabindex="0">
       <div class="bank-card__top">
         <span class="bank-card__label"><img src="/assets/logo.svg" alt="" />IndusTrust</span>
-        <span class="bank-card__chip" aria-hidden="true"></span>
+        ${a.frozen ? `<span class="status-pill status-pill--frozen" title="Frozen by the bank — contact support">Frozen</span>` : `<span class="bank-card__chip" aria-hidden="true"></span>`}
       </div>
       <div class="bank-card__balance"><span class="cur">₹</span>${money(a.balance)}</div>
       <div>
@@ -289,6 +290,24 @@ function showFormErrors(form, errs) {
   }
 }
 
+function setupPasswordToggles() {
+  $$("[data-toggle-pw]").forEach((btn) => {
+    if (btn.dataset.wired) return;
+    btn.dataset.wired = "1";
+    btn.addEventListener("click", () => {
+      const input = btn.closest(".field--password").querySelector("input");
+      const showing = input.type === "text";
+      btn.classList.add("is-blinking");
+      setTimeout(() => {
+        input.type = showing ? "password" : "text";
+        btn.setAttribute("aria-pressed", String(!showing));
+        btn.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+      }, 170);
+      setTimeout(() => btn.classList.remove("is-blinking"), 380);
+    });
+  });
+}
+
 let moneyMode = "credit";
 function openMoney(mode) {
   moneyMode = mode;
@@ -320,6 +339,14 @@ async function submitMoney(e) {
 }
 
 let transferPrefill = null;
+
+function checkTransferTotpVisibility() {
+  const form = $("#transferForm");
+  const amount = Number(form.elements.amount.value || 0);
+  const needsTotp = currentUser?.totpEnabled && amount >= HIGH_VALUE_THRESHOLD;
+  $("#transferTotpField").hidden = !needsTotp;
+}
+
 async function submitTransfer(e) {
   e.preventDefault();
   const form = $("#transferForm");
@@ -332,15 +359,27 @@ async function submitTransfer(e) {
       body: JSON.stringify({
         fromAccountNumber: activeNumber,
         toAccountNumber: Number(d.toAccountNumber),
-        amount: d.amount, pin: d.pin,
+        amount: d.amount, pin: d.pin, totpCode: d.totpCode || null,
       }),
     });
     closeOverlay("#transferOverlay");
     toast("Transfer sent");
     ledgerPage = 0;
     loadAccounts(activeNumber);
-  } catch (err) { handleFormError(form, err); }
-  finally { btn.disabled = false; }
+  } catch (err) {
+    if (err.body?.code === "TOTP_REQUIRED") {
+      $("#transferTotpField").hidden = false;
+      showFormErrors(form, {});
+      $('[data-error="totpCode"]', form).textContent = err.body.message || "Enter your 2FA code";
+      setTimeout(() => form.elements.totpCode.focus(), 30);
+      return;
+    }
+    if (err.body?.code === "TOTP_INVALID") {
+      showFormErrors(form, { totpCode: err.body.message || "Incorrect code" });
+      return;
+    }
+    handleFormError(form, err);
+  } finally { btn.disabled = false; }
 }
 
 async function submitOpen(e) {
@@ -626,11 +665,84 @@ function setupCalculators() {
 }
 
 /* ---------- Profile ---------- */
+function maskPan(pan) {
+  if (!pan || pan.length < 4) return pan || "—";
+  return pan.slice(0, 2) + "XXXXX" + pan.slice(-2);
+}
+function maskPhone(phone) {
+  if (!phone || phone.length < 4) return phone || "—";
+  return "+91 " + phone.slice(0, 2) + "••••••" + phone.slice(-2);
+}
+
 function renderProfile() {
   if (!currentUser) return;
   $("#profName").textContent = currentUser.fullName || "—";
   $("#profEmail").textContent = currentUser.email || "—";
   $("#profCustId").textContent = "IT" + String(currentUser.id ?? 100000).toString().padStart(6, "0");
+  $("#profPhone").textContent = maskPhone(currentUser.phone);
+  $("#profDob").textContent = currentUser.dateOfBirth ? fmtDate(currentUser.dateOfBirth) : "—";
+  $("#profPan").textContent = maskPan(currentUser.panNumber);
+  $("#profAddress").textContent = currentUser.address || "—";
+  renderTwofaStatus();
+}
+
+function renderTwofaStatus() {
+  const on = !!currentUser?.totpEnabled;
+  $("#twofaOff").hidden = on;
+  $("#twofaOn").hidden = !on;
+  $("#twofaSetup").hidden = true;
+}
+
+async function startTwofaSetup() {
+  try {
+    const res = await api("/api/2fa/setup", { method: "POST" });
+    $("#twofaSecret").value = res.secret;
+    $("#twofaOff").hidden = true;
+    $("#twofaSetup").hidden = false;
+    $("#twofaEnableForm").reset();
+    clearFormErrors($("#twofaEnableForm"));
+  } catch (err) {
+    toast(err.body?.message || "Couldn't start 2FA setup", "error");
+  }
+}
+
+async function submitTwofaEnable(e) {
+  e.preventDefault();
+  const form = $("#twofaEnableForm");
+  const code = form.elements.code.value.trim();
+  const btn = $("#twofaEnableSubmit");
+  btn.disabled = true;
+  try {
+    await api("/api/2fa/enable", { method: "POST", body: JSON.stringify({ code }) });
+    toast("2FA enabled");
+    currentUser = await api("/api/auth/me");
+    renderTwofaStatus();
+  } catch (err) {
+    if (err.body?.fieldErrors) { showFormErrors(form, err.body.fieldErrors); }
+    else { showFormErrors(form, { code: err.body?.message || "Incorrect code" }); }
+  } finally { btn.disabled = false; }
+}
+
+async function submitTwofaDisable(e) {
+  e.preventDefault();
+  const form = $("#twofaDisableForm");
+  const d = Object.fromEntries(new FormData(form).entries());
+  const btn = $("#twofaDisableSubmit");
+  btn.disabled = true;
+  try {
+    await api("/api/2fa/disable", { method: "POST", body: JSON.stringify({ password: d.password, code: d.code }) });
+    toast("2FA disabled");
+    form.reset();
+    currentUser = await api("/api/auth/me");
+    renderTwofaStatus();
+  } catch (err) {
+    if (err.body?.fieldErrors) { showFormErrors(form, err.body.fieldErrors); }
+    else if (err.status === 403 && (err.body?.message || "").toLowerCase().includes("password")) {
+      showFormErrors(form, { password: err.body.message });
+    } else {
+      showFormErrors(form, { code: err.body?.message || "Couldn't disable 2FA" });
+    }
+  } finally { btn.disabled = false; }
 }
 
 async function submitPasswordChange(e) {
@@ -722,6 +834,8 @@ async function init() {
   try { currentUser = await api("/api/auth/me"); }
   catch { return; } // api() already redirected on 401
   $("#userName").textContent = currentUser.fullName;
+  if (currentUser.role === "ADMIN") $("#adminNavLink").hidden = false;
+  setupPasswordToggles();
 
   // sidebar nav
   $$(".nav__item[data-view]").forEach((b) => b.addEventListener("click", () => goToView(b.dataset.view)));
@@ -781,6 +895,7 @@ async function init() {
   // forms
   $("#moneyForm").addEventListener("submit", submitMoney);
   $("#transferForm").addEventListener("submit", submitTransfer);
+  $("#transferForm").elements.amount.addEventListener("input", checkTransferTotpVisibility);
   $("#openForm").addEventListener("submit", submitOpen);
   $("#billForm").addEventListener("submit", submitBill);
 
@@ -842,6 +957,16 @@ async function init() {
 
   // password change
   $("#passwordForm").addEventListener("submit", submitPasswordChange);
+
+  // two-factor authentication
+  $("#twofaStartBtn").addEventListener("click", startTwofaSetup);
+  $("#twofaCancelBtn").addEventListener("click", () => { $("#twofaSetup").hidden = true; $("#twofaOff").hidden = false; });
+  $("#twofaCopyBtn").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText($("#twofaSecret").value); toast("Key copied"); }
+    catch { $("#twofaSecret").select(); }
+  });
+  $("#twofaEnableForm").addEventListener("submit", submitTwofaEnable);
+  $("#twofaDisableForm").addEventListener("submit", submitTwofaDisable);
 
   // modal close
   $("#moneyClose").addEventListener("click", () => closeOverlay("#moneyOverlay"));

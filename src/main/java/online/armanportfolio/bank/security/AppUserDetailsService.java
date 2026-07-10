@@ -23,6 +23,6 @@ public class AppUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("No user for " + email));
         return new org.springframework.security.core.userdetails.User(
                 u.getEmail(), u.getPasswordHash(),
-                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+                List.of(new SimpleGrantedAuthority("ROLE_" + u.getRole().name())));
     }
 }

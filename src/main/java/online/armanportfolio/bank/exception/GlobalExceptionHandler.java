@@ -3,6 +3,7 @@ package online.armanportfolio.bank.exception;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -19,12 +20,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Map<String, Object>> handleApi(ApiException ex) {
-        return build(ex.getStatus(), ex.getMessage());
+        return build(ex.getStatus(), ex.getMessage(), ex.getCode());
     }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<Map<String, Object>> handleBadCreds(BadCredentialsException ex) {
         return build(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
+        return build(HttpStatus.FORBIDDEN, "You don't have permission to do that");
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
@@ -50,6 +56,12 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<Map<String, Object>> build(HttpStatus s, String m) {
         return ResponseEntity.status(s).body(base(s, m));
+    }
+
+    private ResponseEntity<Map<String, Object>> build(HttpStatus s, String m, String code) {
+        Map<String, Object> body = base(s, m);
+        if (code != null) body.put("code", code);
+        return ResponseEntity.status(s).body(body);
     }
 
     private Map<String, Object> base(HttpStatus s, String m) {
